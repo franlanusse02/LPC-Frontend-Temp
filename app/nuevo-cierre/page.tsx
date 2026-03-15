@@ -5,18 +5,17 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/header";
 import { NuevoCierreForm } from "@/components/nuevo-cierre-form";
-import {
-  getComedores,
-  getPuntosDeVenta,
-  Comedor,
-  PuntoDeVenta,
-} from "@/lib/api";
+import { apiFetch } from "@/lib/api";
+import { ComedorResponse } from "@/models/dto/comedor/ComedorResponse";
+import { PuntoDeVentaResponse } from "@/models/dto/pto-venta/PuntoDeVentaResponse";
 
 export default function NuevoCierrePage() {
   const router = useRouter();
   const { session, isLoading, token } = useAuth();
-  const [comedores, setComedores] = useState<Comedor[]>([]);
-  const [puntosDeVenta, setPuntosDeVenta] = useState<PuntoDeVenta[]>([]);
+  const [comedores, setComedores] = useState<ComedorResponse[]>([]);
+  const [puntosDeVenta, setPuntosDeVenta] = useState<PuntoDeVentaResponse[]>(
+    [],
+  );
 
   useEffect(() => {
     if (!isLoading && !session) {
@@ -27,8 +26,16 @@ export default function NuevoCierrePage() {
   useEffect(() => {
     async function fetchData() {
       if (!token) return;
-      const fetchedComedores = await getComedores(token);
-      const fetchedPuntos = await getPuntosDeVenta(token);
+      const fetchedComedores = await apiFetch<ComedorResponse[]>(
+        "/api/comedor",
+        {},
+        token,
+      );
+      const fetchedPuntos = await apiFetch<PuntoDeVentaResponse[]>(
+        "/api/puntodeventa",
+        {},
+        token,
+      );
       setComedores(fetchedComedores);
       setPuntosDeVenta(fetchedPuntos);
     }

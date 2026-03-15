@@ -1,5 +1,7 @@
 export type RegisterRequest = {
-    cuil: number;
-    rol: string;
-    password: string;
-}
+  cuil: number;
+  rol: string;
+  nombre: string;
+  password: string;
+};
+

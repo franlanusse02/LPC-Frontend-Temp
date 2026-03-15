@@ -1,9 +1,3 @@
-export const MEDIOS_PAGO = {
-  Efectivo: "EFECTIVO",
-  "Tarjeta de Débito": "DEBITO",
-  "Tarjeta de Crédito": "CREDITO",
-} as const;
-
 export function getTodayDate(): string {
   const today = new Date();
   const year = today.getFullYear();

@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { MEDIOS_PAGO } from "@/lib/constants";
+import { MediosPagoDict } from "@/models/enums/MedioPago";
 import { FormField } from "@/components/form-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ interface PaymentLineRowProps {
   index: number;
   onUpdate: (index: number, field: keyof PaymentLine, value: string) => void;
   onRemove: (index: number) => void;
+  selectedLines: string[];
+  setSelectedLines: (lines: string[]) => void;
 }
 
 export function PaymentLineRow({
@@ -30,27 +32,69 @@ export function PaymentLineRow({
   index,
   onUpdate,
   onRemove,
+  selectedLines,
+  setSelectedLines,
 }: PaymentLineRowProps) {
+  const handleUpdate = (
+    index: number,
+    field: keyof PaymentLine,
+    value: string,
+  ) => {
+    const oldValue = line[field];
+    const updatedSelected = selectedLines
+      .filter((v) => v !== oldValue)
+      .concat(value);
+
+    onUpdate(index, field, value);
+    setSelectedLines(updatedSelected);
+  };
+
+  const handleRemove = (index: number) => {
+    const oldValue = line.medioPago;
+    const updatedSelected = selectedLines.filter((v) => v !== oldValue);
+    setSelectedLines(updatedSelected);
+    onRemove(index);
+  };
+
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-end">
       <div className="flex-1">
         <FormField label="Medio de Pago">
           <Select
             value={line.medioPago}
-            onValueChange={(value) => onUpdate(index, "medioPago", value)}
+            onValueChange={(value) => handleUpdate(index, "medioPago", value)}
           >
             <SelectTrigger className="w-full bg-card">
               <SelectValue placeholder="Seleccionar..." />
             </SelectTrigger>
             <SelectContent>
-              {Object.keys(MEDIOS_PAGO).map((key) => (
-                <SelectItem
-                  key={key}
-                  value={MEDIOS_PAGO[key as keyof typeof MEDIOS_PAGO]}
-                >
-                  {key}
-                </SelectItem>
-              ))}
+              {(() => {
+                const availableKeys = Object.keys(MediosPagoDict).filter(
+                  (key) =>
+                    !selectedLines.includes(
+                      MediosPagoDict[key as keyof typeof MediosPagoDict],
+                    ) ||
+                    MediosPagoDict[key as keyof typeof MediosPagoDict] ===
+                      line.medioPago,
+                );
+
+                if (availableKeys.length === 0) {
+                  return (
+                    <SelectItem disabled value="disabled">
+                      No hay más medios de pago disponibles
+                    </SelectItem>
+                  );
+                }
+
+                return availableKeys.map((key) => (
+                  <SelectItem
+                    key={key}
+                    value={MediosPagoDict[key as keyof typeof MediosPagoDict]}
+                  >
+                    {key}
+                  </SelectItem>
+                ));
+              })()}
             </SelectContent>
           </Select>
         </FormField>
@@ -74,7 +118,7 @@ export function PaymentLineRow({
         type="button"
         variant="outline"
         size="icon"
-        onClick={() => onRemove(index)}
+        onClick={() => handleRemove(index)}
         aria-label="Eliminar línea"
         className="h-9 w-9 shrink-0 self-start border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground md:self-auto"
       >

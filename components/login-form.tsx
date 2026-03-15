@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { login, ApiError } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
+import { ApiError } from "@/models/dto/ApiError";
 import { useAuth } from "@/lib/auth-context";
+import { LoginResponse } from "@/models/dto/auth/LoginResponse";
 
 export function LoginForm() {
   const router = useRouter();
@@ -33,11 +35,19 @@ export function LoginForm() {
         throw new Error("Ingresa un CUIL válido");
       }
 
-      const auth = await login(cuil, password);
+      const auth = await apiFetch<LoginResponse>(
+        "/api/usuarios/login",
+        {
+          method: "POST",
+          body: JSON.stringify({ cuil, password }),
+        },
+        undefined,
+      );
 
       loginSession({
         token: auth.token,
-        usuario,
+        rol: auth.rol,
+        name: auth.name,
       });
 
       router.replace("/");
@@ -59,7 +69,7 @@ export function LoginForm() {
       <Card className="w-full max-w-md border-0 shadow-lg">
         <CardContent className="p-10">
           <div className="mb-10 flex justify-center">
-            <Brand large />
+            <Brand greet={false} />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

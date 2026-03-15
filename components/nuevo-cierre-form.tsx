@@ -19,23 +19,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  createCierre,
-  createMovimiento,
-  Comedor,
-  PuntoDeVenta,
-  ApiError,
-} from "@/lib/api";
-import { getTodayDate } from "@/lib/constants";
+import { apiFetch } from "@/lib/api";
+import { getTodayDate } from "@/lib/dateParser";
+import { ApiError } from "@/models/dto/ApiError";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { ComedorResponse } from "@/models/dto/comedor/ComedorResponse";
+import { PuntoDeVentaResponse } from "@/models/dto/pto-venta/PuntoDeVentaResponse";
+import { MovimientoResponse } from "@/models/dto/movimiento/MovimientoResponse";
+import { CierreCajaResponse } from "@/models/dto/cierre-caja/CierreCajaResponse";
+import { MediosPagoDict } from "@/models/enums/MedioPago";
 
 export function NuevoCierreForm({
   comedores,
   puntosDeVenta,
 }: {
-  comedores: Comedor[];
-  puntosDeVenta: PuntoDeVenta[];
+  comedores: ComedorResponse[];
+  puntosDeVenta: PuntoDeVentaResponse[];
 }) {
   const router = useRouter();
   const { session, logout } = useAuth();
@@ -45,8 +45,10 @@ export function NuevoCierreForm({
   const [comedor, setComedor] = useState("");
   const [puntoVenta, setPuntoVenta] = useState("");
   const [platosVendidos, setPlatosVendidos] = useState("");
+  const [comentario, setComentario] = useState("");
   const [lines, setLines] = useState<PaymentLine[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedLines, setSelectedLines] = useState<string[]>([]);
 
   if (!session) return null;
 
@@ -95,24 +97,48 @@ export function NuevoCierreForm({
       (line) => line.medioPago && line.monto && Number(line.monto) > 0,
     );
 
+    if (validLines.length != lines.length) {
+      toast({
+        variant: "destructive",
+        title: "Campos invalidos",
+        description:
+          "Completa correctamente todos los campos de las líneas de pago.",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       // 1. Create the cierre
-      const cierreResponse = await createCierre(token, {
-        puntoVentaId,
-        fechaOperacion,
-        totalPlatosVendidos,
-        comentarios: "",
-      });
+      const cierreResponse = await apiFetch<CierreCajaResponse>(
+        "/api/cierre",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            puntoVentaId,
+            fechaOperacion,
+            totalPlatosVendidos,
+            comentarios: comentario,
+          }),
+        },
+        token,
+      );
 
       // 2. Create movimientos for each valid payment line
       if (validLines.length > 0) {
         const movimientoPromises = validLines.map((line) =>
-          createMovimiento(token, {
-            cierreCajaId: cierreResponse.id,
-            medioPago: line.medioPago,
-            monto: Number(line.monto),
-          }),
+          apiFetch<MovimientoResponse>(
+            "/api/movimiento",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                cierreCajaId: cierreResponse.id,
+                medioPago: line.medioPago,
+                monto: Number(line.monto),
+              }),
+            },
+            token,
+          ),
         );
 
         await Promise.all(movimientoPromises);
@@ -126,6 +152,7 @@ export function NuevoCierreForm({
             ? `Se creó el cierre con ${validLines.length} línea(s) de pago.`
             : "Se creó el cierre correctamente.",
       });
+      router.push("/");
     } catch (err) {
       if (ApiError.isUnauthorized(err)) {
         toast({
@@ -156,6 +183,9 @@ export function NuevoCierreForm({
     }
   };
 
+  const allMedios = Object.values(MediosPagoDict);
+  const isAddLineDisabled = allMedios.length === selectedLines.length;
+
   return (
     <div className="space-y-6">
       <Card className="border-0 shadow-sm">
@@ -174,6 +204,7 @@ export function NuevoCierreForm({
                   value={fechaOperacion}
                   onChange={(e) => setFechaOperacion(e.target.value)}
                   className="max-w-xs bg-card"
+                  max={new Date().toISOString().split("T")[0]}
                 />
               </FormField>
 
@@ -191,9 +222,14 @@ export function NuevoCierreForm({
                   <SelectContent>
                     {comedores.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
-                        {c.name}
+                        {c.nombre}
                       </SelectItem>
                     ))}
+                    {comedores.length === 0 && (
+                      <SelectItem value="disabled" disabled>
+                        No hay comedores disponibles
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </FormField>
@@ -213,6 +249,11 @@ export function NuevoCierreForm({
                         {p.nombre}
                       </SelectItem>
                     ))}
+                    {filteredPuntosDeVenta.length === 0 && (
+                      <SelectItem value="disabled" disabled>
+                        No hay puntos de venta disponibles
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </FormField>
@@ -226,6 +267,17 @@ export function NuevoCierreForm({
                   onChange={(e) => setPlatosVendidos(e.target.value)}
                   className="max-w-xs bg-card"
                   placeholder="0"
+                />
+              </FormField>
+
+              <FormField label="Comentarios">
+                <Input
+                  type="text"
+                  aria-multiline
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  className="max-w-xs bg-card"
+                  placeholder="Comentario (opcional)"
                 />
               </FormField>
             </div>
@@ -244,6 +296,8 @@ export function NuevoCierreForm({
                     index={i}
                     onUpdate={updateLine}
                     onRemove={removeLine}
+                    selectedLines={selectedLines}
+                    setSelectedLines={setSelectedLines}
                   />
                 ))}
 
@@ -251,6 +305,7 @@ export function NuevoCierreForm({
                   type="button"
                   variant="outline"
                   onClick={addLine}
+                  disabled={isAddLineDisabled}
                   className="mx-auto flex gap-2 text-sm font-bold uppercase tracking-wide"
                 >
                   <Plus className="h-4 w-4" />
@@ -266,7 +321,9 @@ export function NuevoCierreForm({
       <div className="flex justify-center pb-6">
         <Button
           onClick={handleFinalizar}
-          disabled={loading || !puntoVenta || !platosVendidos}
+          disabled={
+            loading || !puntoVenta || !platosVendidos || lines.length === 0
+          }
           size="lg"
           className="px-10 text-sm font-bold uppercase tracking-wide"
         >

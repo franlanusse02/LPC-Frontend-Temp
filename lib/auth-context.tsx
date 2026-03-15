@@ -11,7 +11,8 @@ import {
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface Session {
   token: string;
-  usuario: string;
+  name: string;
+  rol: string;
 }
 
 interface AuthContextValue {
