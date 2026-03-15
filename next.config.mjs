@@ -1,6 +1,9 @@
+const repo = "LPC-Frontend";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "export",
+  basePath: `/${repo}`,
+  assetPrefix: `/${repo}/`,
   typescript: {
     ignoreBuildErrors: true,
   },
