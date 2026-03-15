@@ -47,7 +47,7 @@ export function LoginForm() {
       loginSession({
         token: auth.token,
         rol: auth.rol,
-        name: auth.name,
+        nombre: auth.nombre,
       });
 
       router.replace("/");
