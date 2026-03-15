@@ -55,7 +55,7 @@ export default function HomePage() {
           <Card className="border-0 shadow-md rounded-xl">
             <CardHeader className="flex items-center justify-between border-b px-6 py-4">
               <CardTitle className="text-xl font-bold text-gray-800">
-                Cierres Previos
+                Tus Cierres
               </CardTitle>
               <Button
                 asChild

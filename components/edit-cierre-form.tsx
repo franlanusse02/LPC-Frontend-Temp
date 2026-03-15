@@ -66,9 +66,8 @@ export function EditCierreForm({
   const [comentario, setComentario] = useState(cierre.comentarios ?? "");
 
   // Pre-populate payment lines from existing movimientos (only non-anulados)
-  const existingMovimientos = (cierre.movimientos ?? []).filter(
-    (m) => !m.anulacionId,
-  );
+  const existingMovimientos = cierre.movimientos ?? [];
+
   const [lines, setLines] = useState<PaymentLine[]>(
     existingMovimientos.map((m) => ({
       medioPago: m.medioPago,

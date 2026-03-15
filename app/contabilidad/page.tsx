@@ -43,6 +43,7 @@ export default function ContabilidadPage() {
     open: boolean;
     cierreId: number;
     fechaOperacion: string;
+    puntoVenta: string;
     isAnulado: boolean;
   } | null>(null);
 
@@ -56,7 +57,7 @@ export default function ContabilidadPage() {
   useEffect(() => {
     if (session) {
       apiFetch<DetailedCierreCajaResponse[]>(
-        "/api/cierre?detailed=true",
+        "/api/cierre/detailed",
         {},
         session.token,
       )
@@ -75,20 +76,24 @@ export default function ContabilidadPage() {
     });
   };
 
-  const handleAnularDesanular = async (cierreId: number) => {
+  const handleAnular = async (cierreId: number, motivo: string) => {
     if (!session) return;
     const cierre = cierres.find((c) => c.id === cierreId);
     if (!cierre) return;
 
     const isAnulado = cierre.anulacionId !== null;
-    const endpoint = isAnulado
-      ? `/api/cierre/${cierreId}/desanular`
-      : `/api/cierre/${cierreId}/anular`;
+    const endpoint = `/api/cierre/${cierreId}/anular`;
 
     try {
-      await apiFetch(endpoint, { method: "POST" }, session.token);
+      await apiFetch(
+        endpoint,
+        {
+          method: "POST",
+          body: JSON.stringify({ motivo: motivo }),
+        },
+        session.token,
+      );
 
-      // Optimistically update local state
       setCierres((prev) =>
         prev.map((c) => {
           if (c.id !== cierreId) return c;
@@ -100,10 +105,8 @@ export default function ContabilidadPage() {
       );
 
       toast({
-        title: isAnulado ? "Cierre desanulado" : "Cierre anulado",
-        description: isAnulado
-          ? "El cierre fue reactivado correctamente."
-          : "El cierre fue anulado correctamente.",
+        title: "Cierre anulado",
+        description: "El cierre fue anulado correctamente.",
       });
     } catch (err) {
       if (ApiError.isUnauthorized(err)) {
@@ -119,7 +122,7 @@ export default function ContabilidadPage() {
             ? err.message
             : "No se pudo completar la operación.",
       });
-      throw err; // re-throw so modal can handle loading state
+      throw err;
     }
   };
 
@@ -128,6 +131,7 @@ export default function ContabilidadPage() {
       open: true,
       cierreId: cierre.id,
       fechaOperacion: cierre.fechaOperacion,
+      puntoVenta: cierre.puntoDeVenta.nombre,
       isAnulado: cierre.anulacionId !== null,
     });
   };
@@ -284,54 +288,54 @@ export default function ContabilidadPage() {
 
                             {/* Actions */}
                             <td className="px-4 py-4">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 data-[state=open]:bg-gray-100"
-                                    aria-label="Acciones"
+                              {isAnulado ? (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild disabled>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 data-[state=open]:bg-gray-100"
+                                      aria-label="Acciones"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                </DropdownMenu>
+                              ) : (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 data-[state=open]:bg-gray-100"
+                                      aria-label="Acciones"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="w-44 rounded-xl shadow-lg border-gray-100"
                                   >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="w-44 rounded-xl shadow-lg border-gray-100"
-                                >
-                                  <DropdownMenuItem
-                                    onClick={() => handleEditar(cierre.id)}
-                                    className="gap-2.5 cursor-pointer rounded-lg text-gray-700 focus:text-gray-900"
-                                  >
-                                    <Pencil className="h-4 w-4 text-gray-400" />
-                                    Editar
-                                  </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleEditar(cierre.id)}
+                                      className="gap-2.5 cursor-pointer rounded-lg text-gray-700 focus:text-gray-900"
+                                    >
+                                      <Pencil className="h-4 w-4 text-gray-400" />
+                                      Editar
+                                    </DropdownMenuItem>
 
-                                  <DropdownMenuSeparator className="my-1" />
-
-                                  <DropdownMenuItem
-                                    onClick={() => openAnularModal(cierre)}
-                                    className={cn(
-                                      "gap-2.5 cursor-pointer rounded-lg",
-                                      isAnulado
-                                        ? "text-emerald-700 focus:text-emerald-800 focus:bg-emerald-50"
-                                        : "text-red-600 focus:text-red-700 focus:bg-red-50",
-                                    )}
-                                  >
-                                    {isAnulado ? (
-                                      <>
-                                        <RotateCcw className="h-4 w-4" />
-                                        Desanular
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Ban className="h-4 w-4" />
-                                        Anular
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                    <DropdownMenuSeparator className="my-1" />
+                                    <DropdownMenuItem
+                                      onClick={() => openAnularModal(cierre)}
+                                      className="gap-2.5 cursor-pointer rounded-lg text-red-600 focus:text-red-700 focus:bg-red-50"
+                                    >
+                                      <Ban className="h-4 w-4" />
+                                      Anular
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                             </td>
                           </tr>
 
@@ -432,10 +436,10 @@ export default function ContabilidadPage() {
         <AnularModal
           open={anularModal.open}
           onClose={closeAnularModal}
-          isAnulado={anularModal.isAnulado}
           cierreId={anularModal.cierreId}
           fechaOperacion={anularModal.fechaOperacion}
-          onConfirm={handleAnularDesanular}
+          puntoVenta={anularModal.puntoVenta}
+          onConfirm={handleAnular}
         />
       )}
     </div>
