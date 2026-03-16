@@ -4,9 +4,11 @@ import { AuthProvider } from "@/lib/auth-context"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
-export const metadata: Metadata = {
-  title: "P_Comedores",
-  description: "Sistema de gestión de comedores",
+export const metadata = {
+  title: "P_COMEDORES",
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-family='Helvetica Neue, Helvetica, Arial, sans-serif'>LPC</text></svg>",
+  },
 }
 
 export const viewport: Viewport = {
