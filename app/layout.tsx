@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "LPC Gestión Comedores",
+  title: "P_Comedores",
   description: "Sistema de gestión de comedores",
 }
 
